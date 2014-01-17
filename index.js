@@ -226,10 +226,17 @@ module.exports = function(css, options){
     comments(decls);
 
     // declarations
-    var decl;
-    while (decl = declaration()) {
-      decls.push(decl);
-      comments(decls);
+    var decl, rule;
+    while ((decl = declaration()) || (rule = expandedatrule())) {
+      if (decl) {
+        decls.push(decl);
+        comments(decls);
+      }
+
+      if (rule) {
+        comments();
+        rule = null;
+      }
     }
 
     if (!close()) return error("missing '}'");
@@ -420,6 +427,34 @@ module.exports = function(css, options){
     });
   }
 
+  function atviewport() {
+    var pos = position();
+    var m = match(/^@([-\w]+)?viewport */);
+
+    if (!m) return;
+    var vendor = m[1];
+
+    return pos({
+      type: 'viewport',
+      vendor: vendor,
+      declarations: declarations()
+    });
+
+  }
+
+  function atfontface() {
+    var pos = position();
+    var m = match(/^@([-\w]+)?font-face */);
+
+    if (!m) return;
+    var vendor = m[1];
+
+    return pos({
+      type: 'fontface',
+      declarations: declarations()
+    });
+  }
+
   /**
    * Parse import
    */
@@ -473,6 +508,12 @@ module.exports = function(css, options){
       || atdocument()
       || atpage()
       || athost();
+  }
+
+  function expandedatrule() {
+    return atrule()
+      || atviewport()
+      || atfontface();
   }
 
   /**
